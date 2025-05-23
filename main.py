@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, MinMaxScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
@@ -30,8 +30,8 @@ if __name__ == "__main__":
     print("\n--- Data Preprocessing ---")
 
     # Identify categorical and numerical features
-    categorical_features = ['model', 'area_cluster']
-    numerical_features = ['age_of_policyholder', 'policy_tenure', 'age_of_car']
+    categorical_features = ['model', 'area_cluster', 'fuel_type', 'transmission_type', 'rear_brakes_type']
+    numerical_features = ['age_of_policyholder', 'policy_tenure', 'age_of_car', 'population_density']
 
     # Define features and target
     feature_cols = categorical_features + numerical_features
@@ -41,6 +41,7 @@ if __name__ == "__main__":
     # Create preprocessing pipelines for numerical and categorical features
     numerical_pipeline = Pipeline([
         ('scaler', StandardScaler())
+        #('scaler', MinMaxScaler())
     ])
 
     categorical_pipeline = Pipeline([
@@ -83,14 +84,20 @@ if __name__ == "__main__":
     print("\n--- Building Neural Network Model ---")
 
     # Define the model
+    # model = tf.keras.Sequential([
+    #     tf.keras.layers.InputLayer(input_shape=(X_train_processed.shape[1],)),
+    #     tf.keras.layers.Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001)),
+    #     tf.keras.layers.Dropout(0.3),
+    #     tf.keras.layers.Dense(64, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001)),
+    #     tf.keras.layers.Dropout(0.2),
+    #     tf.keras.layers.Dense(32, activation='relu'),
+    #     tf.keras.layers.Dense(1, activation='sigmoid') # Sigmoid for binary classification
+    # ])
+
     model = tf.keras.Sequential([
         tf.keras.layers.InputLayer(input_shape=(X_train_processed.shape[1],)),
-        tf.keras.layers.Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001)),
-        tf.keras.layers.Dropout(0.3),
         tf.keras.layers.Dense(64, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001)),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dense(1, activation='sigmoid') # Sigmoid for binary classification
+        tf.keras.layers.Dense(1, activation='sigmoid')
     ])
 
     # Compile the model
@@ -131,7 +138,7 @@ if __name__ == "__main__":
     history = model.fit(
         X_train_processed,
         y_train,
-        epochs=5, # Max epochs
+        epochs=100, # Max epochs
         batch_size=32,
         validation_data=(X_val_processed, y_val),
         callbacks=[early_stopping],
