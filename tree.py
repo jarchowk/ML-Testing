@@ -1,17 +1,20 @@
 import pandas as pd
 import numpy as np
-import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+from sklearn.metrics import roc_auc_score
 from xgboost import XGBClassifier
+
+import matplotlib.pyplot as plt
+from xgboost import plot_importance
+
+import matplotlib.pyplot as plt
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-tf.config.set_visible_devices([], 'GPU')
 
 def load_data():
     train = pd.read_csv('train.csv')
@@ -97,6 +100,35 @@ if __name__ == "__main__":
     y_val_pred = model.predict_proba(X_val_processed)[:, 1]
     val_auc = roc_auc_score(y_val, y_val_pred)
     print(f"Validation AUC: {val_auc:.4f}")
+
+
+    # Step 1: Get feature names from preprocessor
+    feature_names = preprocessor.get_feature_names_out()
+
+    # Step 2: Map f0, f1, ..., to actual names
+    xgb_feature_map = {f"f{i}": name for i, name in enumerate(feature_names)}
+
+    # Step 3: Get feature importances from XGBoost model
+    booster = model.get_booster()
+    importance = booster.get_score(importance_type='gain')  # use 'gain', 'weight', etc.
+
+    # Step 4: Map internal names to real names
+    readable_importance = {
+        xgb_feature_map.get(k, k): v for k, v in importance.items()
+    }
+
+    # Step 5: Create DataFrame
+    importance_df = pd.DataFrame(
+        list(readable_importance.items()), columns=["Feature", "Importance"]
+    ).sort_values(by="Importance", ascending=False)
+
+    # Step 6: Plot
+    plt.figure(figsize=(10, 6))
+    plt.barh(importance_df["Feature"][:50][::-1], importance_df["Importance"][:50][::-1])
+    plt.title("Top 50 Feature Importances (Gain)")
+    plt.xlabel("Importance (Gain)")
+    plt.tight_layout()
+    plt.show()
 
 
 print("\n--- Example Script Finished ---")
